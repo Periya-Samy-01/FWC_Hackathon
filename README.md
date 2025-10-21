@@ -7,11 +7,14 @@ HRMS-AI-Next is a modern, AI-enhanced Human Resource Management System built wit
 - **Role-Based Access Control:** Secure dashboards for different user roles (Admin, HR, Manager, Employee) with tailored functionalities.
 - **Employee Management:** Centralized database for employee information, including profiles, roles, and reporting lines.
 - **AI-Powered Recruitment:** Integrated AI to screen resumes, analyze skill matrices, and generate interview questions.
+- **AI-Powered Assistant:** Integrated AI Chat bot Assistant which answers for every user according to the role.
 - **Payroll & Compensation:** Automated payroll runs, salary structure management, and payslip generation.
 - **Performance Management:** Goal setting, tracking, and a streamlined approval workflow between employees and managers.
 - **Leave Management:** System for requesting, approving, and tracking employee leave.
 - **System Auditing:** Comprehensive logging of critical system events for security and compliance.
 - **Notifications:** In-app notification system to keep users informed of important events and requests.
+
+I have used "gemini-2.0-flash-lite" which can be used under free tier using google cloud
 
 ## 💻 Tech Stack
 
@@ -93,6 +96,23 @@ npx next dev
 ```
 
 The application should now be running at [http://localhost:3000](http://localhost:3000).
+
+
+## 🔑 Demo Access & Credentials
+
+To make it easy to explore the application's features, the database seed script creates a set of ready-to-use accounts for each user role.
+
+**Universal Password:** `password123`
+
+You can log in with the following accounts to experience the different dashboards and permissions:
+
+| Role | Email | Description |
+| :--- | :--- | :--- |
+| 🧑‍💻 **Admin** | `admin@example.com` | Has full system access. Can view the admin dashboard with system analytics, manage company settings, and view a comprehensive audit log of all critical actions. |
+| 🧑‍💼 **Manager** | `manager1@example.com` | Can view the manager dashboard, which includes pending approval requests (goals, leave, etc.) from their direct reports. They can approve or deny these requests and view their team's performance goals. |
+| 👩‍🏫 **HR** | `hr1@example.com` | Has access to the HR dashboard to manage employee data, run payroll, manage salary structures, and use the AI Resume Screener for recruitment. |
+| 👷 **Employee** | `employee1@example.com` | Has a personal dashboard to view their profile, create and track performance goals, request leave, and view their payslips. `employee1@example.com` reports to `manager1@example.com`. |
+
 
 ## 📜 Available Scripts
 
