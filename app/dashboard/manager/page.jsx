@@ -1,0 +1,205 @@
+"use client";
+import React, { useState, useEffect } from 'react';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday } from 'date-fns';
+import EmployeePerformanceModal from '../../components/dashboard/manager/EmployeePerformanceModal';
+import TeamManagementModal from '../../components/dashboard/manager/TeamManagementModal';
+
+const ManagerDashboard = () => {
+  const [data, setData] = useState({ pendingApprovals: [], teamMembers: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+
+  const handleOpenModal = (employee) => {
+    setSelectedEmployee(employee);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedEmployee(null);
+  };
+
+  const handleOpenTeamModal = () => setIsTeamModalOpen(true);
+  const handleCloseTeamModal = () => setIsTeamModalOpen(false);
+
+  const fetchData = async () => {
+    try {
+      const res = await fetch('/api/dashboard/manager');
+      if (!res.ok) {
+        throw new Error('Failed to fetch data');
+      }
+      const result = await res.json();
+      setData(result);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleApprovalAction = async (id, status) => {
+    try {
+      const res = await fetch(`/api/approvals/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to update request');
+      }
+
+      // Refresh data to show updated list
+      fetchData();
+    } catch (err) {
+      console.error('Failed to process approval:', err);
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Failed to logout', error);
+      alert('Logout failed. Please try again.');
+    }
+  };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen flex items-center justify-center text-red-500">Error: {error}</div>;
+  }
+
+  const { pendingApprovals, teamMembers } = data;
+    const today = new Date();
+    const firstDay = startOfMonth(today);
+    const lastDay = endOfMonth(today);
+    const daysInMonth = eachDayOfInterval({ start: firstDay, end: lastDay });
+    const startingDayIndex = getDay(firstDay);
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Manager Dashboard</h1>
+        <button
+          onClick={handleLogout}
+          className="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors"
+        >
+          Logout
+        </button>
+      </div>
+      <div className="flex flex-col lg:flex-row lg:space-x-8">
+        {/* Main Content */}
+        <main className="w-full lg:w-2/3">
+          {/* Pending Approvals Section */}
+          <section className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">Pending Approvals</h2>
+            <div className="bg-gray-800 rounded-lg p-6">
+              {pendingApprovals?.length > 0 ? (
+                <ul className="space-y-4">
+                  {pendingApprovals.map((request) => (
+                    <li key={request._id} className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="font-semibold">{request.type} Request: {request.requester?.name || 'Unknown User'}</p>
+                        {request.type === 'Leave' && <p className="text-sm text-gray-400">Dates: {request.details?.startDate ? new Date(request.details.startDate).toLocaleDateString() : 'N/A'} to {request.details?.endDate ? new Date(request.details.endDate).toLocaleDateString() : 'N/A'}</p>}
+                        {request.type === 'Expense' && <p className="text-sm text-gray-400">Amount: ${request.details?.amount || 'N/A'}</p>}
+                        {request.type === 'Goal' && <p className="text-sm text-gray-400">Goal: "{request.details?.title || 'N/A'}"</p>}
+                      </div>
+                      <div className="flex space-x-2">
+                        <button onClick={() => handleApprovalAction(request._id, 'Approved')} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Approve</button>
+                        <button onClick={() => handleApprovalAction(request._id, 'Rejected')} className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">Reject</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No pending approvals.</p>
+              )}
+            </div>
+          </section>
+
+          {/* My Team Section */}
+          <section>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">My Team</h2>
+              <button onClick={handleOpenTeamModal} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">+</button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {teamMembers?.map((member) => (
+                <div
+                  key={member._id}
+                  className="bg-gray-800 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-700 transition-shadow"
+                  onClick={() => handleOpenModal(member)}
+                >
+                  <img
+                    src={member.profile?.photoUrl || 'https://i.pravatar.cc/150'}
+                    alt="Team Member"
+                    className="w-24 h-24 rounded-full mx-auto mb-4"
+                  />
+                  <h3 className="text-xl font-bold">{member.name || 'Unknown User'}</h3>
+                  <p className="text-gray-400">{member.profile?.jobTitle || 'No title'}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </main>
+
+        {/* Right Sidebar (Static as per current scope) */}
+        <aside className="w-full lg:w-1/3 mt-8 lg:mt-0">
+          <div className="bg-gray-800 rounded-lg p-6 mb-8">
+            <h3 className="text-xl font-bold mb-4">{format(today, 'MMMM yyyy')}</h3>
+            <div className="grid grid-cols-7 gap-2 text-center">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <div key={day} className="font-bold text-xs text-gray-400">{day}</div>)}
+              {Array.from({ length: startingDayIndex }).map((_, index) => <div key={`empty-${index}`} />)}
+              {daysInMonth.map(day => (
+                <div key={day.toString()} className={`p-2 rounded-full flex items-center justify-center h-8 w-8 ${isToday(day) ? 'bg-blue-500 text-white' : 'text-gray-300'}`}>
+                  {format(day, 'd')}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-gray-800 rounded-lg p-6">
+            <h3 className="text-xl font-bold mb-4">Team Goal Progress</h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between mb-1"><span className="text-sm font-medium text-gray-300">Project Alpha</span><span className="text-sm font-medium text-gray-300">75%</span></div>
+                <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: '75%' }}></div></div>
+              </div>
+              <div>
+                <div className="flex justify-between mb-1"><span className="text-sm font-medium text-gray-300">Q4 OKRs</span><span className="text-sm font-medium text-gray-300">50%</span></div>
+                <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-green-500 h-2.5 rounded-full" style={{ width: '50%' }}></div></div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      {selectedEmployee && (
+        <EmployeePerformanceModal
+          employee={selectedEmployee}
+          onClose={handleCloseModal}
+          onAction={fetchData}
+        />
+      )}
+
+      {isTeamModalOpen && (
+        <TeamManagementModal
+          teamMembers={teamMembers}
+          onClose={handleCloseTeamModal}
+          onTeamUpdate={fetchData}
+        />
+      )}
+    </div>
+  );
+};
+
+export default ManagerDashboard;
